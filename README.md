@@ -1,2 +1,2 @@
 # Digitedgepro
-proanalysis
+DegitEdgePro
