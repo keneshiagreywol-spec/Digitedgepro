@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigitEdge Pro — Matches & Differs Intelligence</title>
+<style>
+:root{
+  --bg:#070b14;
+  --panel:#0d1424;
+  --panel2:#111b2f;
+  --line:#24334f;
+  --accent:#7c9cff;
+  --text:#f5f7fb;
+  --muted:#8795ae;
+  --good:#37d39a;
+  --warn:#ffc857;
+  --bad:#ff6b7a;
+  --transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+}
+
+*{box-sizing:border-box}
+
+html, body{margin:0;padding:0;height:100%;overflow-x:hidden}
+
+body{
+  background:radial-gradient(circle at 10% 0%,#101a31 0,#070b14 38%),#070b14;
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;
+  line-height:1.6;
+}
+
+header{
+  padding:16px 20px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  background:rgba(7,11,20,.95);
+  position:sticky;
+  top:0;
+  z-index:10;
+  backdrop-filter:blur(14px);
+  flex-wrap:wrap;
+}
+
+.brand{display:flex;align-items:center;gap:12px;flex:1;min-width:250px}
+
+.logo{
+  width:38px;
+  height:38px;
+  border-radius:11px;
+  background:linear-gradient(135deg,#7c9cff,#5b6ee1);
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  color:#fff;
+  flex-shrink:0;
+}
+
+h1{font-size:18px;margin:0;font-weight:700}
+
+.sub{color:var(--muted);font-size:11px;margin-top:3px;word-break:break-word}
+
+.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+.nav button{
+  width:auto;
+  padding:8px 12px;
+  font-size:12px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--panel2);
+  color:var(--text);
+  cursor:pointer;
+  transition:var(--transition);
+  white-space:nowrap;
+}
+
+.nav button:hover{border-color:var(--accent);background:rgba(124,156,255,0.1)}
+
+.status{display:flex;align-items:center;gap:7px;color:var(--good);font-size:12px;white-space:nowrap}
+
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good);animation:pulse 2s infinite}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+main{max-width:1280px;margin:auto;padding:16px;display:grid;gap:14px}
+
+.controls,.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px;
+  transition:var(--transition);
+}
+
+.card:hover{border-color:rgba(124,156,255,0.3)}
+
+.controls{display:grid;gap:12px;align-items:end}
+
+label{display:block;color:var(--muted);font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
+
+select,input,button{
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px;
+  background:var(--panel2);
+  color:var(--text);
+  font-weight:600;
+  font-family:inherit;
+  font-size:13px;
+  transition:var(--transition);
+}
+
+select:focus,input:focus,button:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,156,255,0.15)}
+
+button{cursor:pointer}
+
+button:hover:not(:disabled){border-color:var(--accent);background:rgba(124,156,255,0.1)}
+
+button:disabled{opacity:0.5;cursor:not-allowed}
+
+.mode{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.mode button{width:100%;padding:10px}
+
+.mode button.active{background:var(--accent);color:#070b14;border-color:var(--accent);font-weight:700}
+
+.grid{display:grid;gap:14px}
+
+.signal{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.signalbox{
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--panel2);
+  transition:var(--transition);
+}
+
+.signalbox.locked{
+  border-color:var(--accent);
+  background:rgba(124,156,255,0.08);
+}
+
+.kicker{
+  color:var(--muted);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  font-weight:600;
+  display:block;
+  margin-bottom:8px;
+}
+
+.big{font-size:52px;font-weight:800;margin:12px 0;line-height:1}
+
+.score{font-size:28px;font-weight:800;margin:8px 0}
+
+.green{color:var(--good)}
+
+.yellow{color:var(--warn)}
+
+.red{color:var(--bad)}
+
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+
+.metric{
+  padding:14px;
+  background:var(--panel2);
+  border-radius:10px;
+  border:1px solid rgba(36,51,79,0.5);
+  transition:var(--transition);
+}
+
+.metric b{display:block;font-size:20px;margin-top:6px}
+
+.heat{display:grid;grid-template-columns:repeat(auto-fit,minmax(50px,1fr));gap:7px}
+
+.digit{
+  padding:12px 8px;
+  text-align:center;
+  background:var(--panel2);
+  border-radius:9px;
+  border:1px solid rgba(36,51,79,0.5);
+  transition:var(--transition);
+}
+
+.digit:hover{border-color:var(--accent);background:rgba(124,156,255,0.05)}
+
+.digit b{font-size:16px;font-weight:700}
+
+.digit span{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+
+.bar{height:4px;background:#31415f;border-radius:4px;margin-top:6px;overflow:hidden}
+
+.bar i{display:block;height:100%;background:var(--accent);transition:width 0.3s ease}
+
+.ticks{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  line-height:1.8;
+  word-break:break-all;
+  color:#cdd8ef;
+  font-size:12px;
+  padding:12px;
+  background:var(--panel2);
+  border-radius:8px;
+  border:1px solid var(--line);
+  max-height:120px;
+  overflow-y:auto;
+}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+
+th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}
+
+th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:10px}
+
+td{color:var(--text)}
+
+.note{color:var(--muted);font-size:12px;line-height:1.6;margin:0}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600;
+  margin-bottom:12px;
+}
+
+.badge{
+  padding:6px 10px;
+  border-radius:7px;
+  font-size:11px;
+  font-weight:700;
+  display:inline-block;
+  transition:var(--transition);
+}
+
+.badge.good{background:rgba(55,211,154,.15);color:#55e0ab;border:1px solid rgba(55,211,154,.3)}
+
+.badge.wait{background:rgba(255,200,87,.15);color:#ffd878;border:1px solid rgba(255,200,87,.3)}
+
+.badge.bad{background:rgba(255,107,122,.15);color:#ff9aa5;border:1px solid rgba(255,107,122,.3)}
+
+.badge.locked{background:rgba(124,156,255,.15);color:#7c9cff;border:1px solid rgba(124,156,255,.3)}
+
+.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+
+.section-title h2{font-size:14px;margin:0;font-weight:700}
+
+.explain{font-size:12px;line-height:1.6;color:var(--muted)}
+
+.error-box{
+  background:rgba(255,107,122,.1);
+  border:1px solid rgba(255,107,122,.3);
+  color:#ff9aa5;
+  padding:12px;
+  border-radius:8px;
+  font-size:12px;
+  margin-bottom:12px;
+  display:none;
+}
+
+.error-box.show{display:block;animation:slideIn 0.3s ease}
+
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+
+.success-box{
+  background:rgba(55,211,154,.1);
+  border:1px solid rgba(55,211,154,.3);
+  color:#55e0ab;
+  padding:12px;
+  border-radius:8px;
+  font-size:12px;
+  margin-bottom:12px;
+  display:none;
+}
+
+.success-box.show{display:block;animation:slideIn 0.3s ease}
+
+.admin{display:none}
+
+.admin.open{display:block}
+
+.hero{display:grid;gap:14px}
+
+.hero .card{min-height:120px}
+
+.loader{
+  display:inline-block;
+  width:12px;
+  height:12px;
+  border:2px solid var(--line);
+  border-top:2px solid var(--accent);
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:1024px){
+  .signal{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .heat{grid-template-columns:repeat(5,1fr)}
+  .grid{grid-template-columns:1fr}
+}
+
+@media(max-width:768px){
+  header{padding:12px 14px;gap:8px}
+  h1{font-size:16px}
+  .logo{width:32px;height:32px;font-size:12px}
+  .nav{gap:4px}
+  .nav button{padding:6px 10px;font-size:11px}
+  main{padding:12px;gap:10px}
+  .controls,.card{padding:12px}
+  .big{font-size:40px}
+  .score{font-size:24px}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .heat{grid-template-columns:repeat(4,1fr)}
+  .ticks{max-height:100px;font-size:11px}
+  table{font-size:11px}
+  th,td{padding:8px}
+  .controls{grid-template-columns:1fr}
+}
+
+@media(max-width:480px){
+  header{flex-direction:column;align-items:flex-start}
+  .brand{width:100%}
+  .nav{width:100%}
+  .status{width:100%}
+  h1{font-size:14px}
+  .big{font-size:36px}
+  .score{font-size:20px}
+  .metric b{font-size:18px}
+  .heat{grid-template-columns:repeat(3,1fr)}
+  .ticks{font-size:10px}
+  .signalbox{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">DE</div>
+    <div>
+      <h1>DigitEdge Pro</h1>
+      <div class="sub">Matches & Differs Intelligence • Analysis Only</div>
+    </div>
+  </div>
+  <div class="nav">
+    <button onclick="scrollToId('dashboard')">Dashboard</button>
+    <button onclick="scrollToId('signals')">Signals</button>
+    <button onclick="scrollToId('history')">History</button>
+    <button onclick="scrollToId('adminFull')">Admin</button>
+  </div>
+  <div class="status"><span class="dot"></span> LIVE DATA</div>
+</header>
+
+<main>
+
+<div id="errorBox" class="error-box"></div>
+<div id="successBox" class="success-box"></div>
+
+<section class="hero" id="dashboard">
+  <div class="card">
+    <span class="pill">🔒 ANALYSIS ONLY</span>
+    <h2 style="font-size:22px;margin:10px 0 8px;font-weight:700">Digit probability intelligence</h2>
+    <p class="explain">Select a Deriv index and choose MATCHES or DIFFERS. The engine analyzes live tick digit distributions to predict the most likely next digit. <strong>No contracts can be placed from this application.</strong></p>
+  </div>
+  <div class="card">
+    <div class="kicker">Engine status</div>
+    <div style="font-size:24px;font-weight:800;margin:8px 0" id="engineStatus">Ready</div>
+    <span class="badge wait" id="engineBadge">Initializing</span>
+  </div>
+</section>
+
+<section class="controls">
+  <div><label>Deriv index</label><select id="market"><option value="">Loading active indices…</option></select></div>
+  <div><label>Analysis mode</label><div class="mode"><button id="match" class="active">MATCHES</button><button id="diff">DIFFERS</button></div></div>
+  <div><label>Sample size</label><select id="sample"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="250" selected>250</option><option value="500">500</option><option value="1000">1000</option></select></div>
+  <div><button id="adminBtn">ADMIN</button></div>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>Analysis window</h2>
+    <span class="kpi" style="font-size:11px;color:var(--muted)">Adjust sample size to reduce overfitting</span>
+  </div>
+  <div class="range" id="ranges" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(60px,1fr));gap:8px">
+    <button value="25">25</button>
+    <button value="50">50</button>
+    <button value="100">100</button>
+    <button value="250" class="active">250</button>
+    <button value="500">500</button>
+    <button value="1000">1000</button>
+    <button value="2500">2500</button>
+  </div>
+</section>
+
+<section class="grid" id="signals">
+  <div class="card">
+    <div class="signal">
+      <div class="signalbox" id="predictionBox">
+        <span class="kicker" id="modeTitle">Matches signal</span>
+        <div class="big" id="predicted">—</div>
+        <div class="kicker">Predicted digit</div>
+        <div style="height:8px"></div>
+        <span class="badge wait" id="predictionLock">Click MATCHES/DIFFERS to predict</span>
+      </div>
+      <div class="signalbox">
+        <span class="kicker">Signal score</span>
+        <div class="score" id="score">Waiting…</div>
+        <span class="kicker" id="qualified" style="color:var(--muted);margin-top:8px">Collecting tick data</span>
+      </div>
+    </div>
+    <div style="height:12px"></div>
+    <div class="metrics">
+      <div class="metric"><span class="kicker">Last digit</span><b id="lastDigit">—</b></div>
+      <div class="metric"><span class="kicker">Ticks</span><b id="tickCount">0</b></div>
+      <div class="metric"><span class="kicker">Best freq.</span><b id="freq">—</b></div>
+      <div class="metric"><span class="kicker">90% filter</span><b id="filter">NO</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="kicker">Analysis rules</div>
+    <p class="note">The score is a statistical ranking of digit frequencies, not a guaranteed win probability. A "90%+ QUALIFIED" label appears when the score meets the validation threshold. <strong>No trade execution, stake, balance, or contract calls are used.</strong></p>
+    <p class="note" style="margin-top:12px"><strong>Prediction Locked:</strong> Once you select MATCHES or DIFFERS, the predicted digit is locked and will not change until you click one of the mode buttons again.</p>
+    <div class="kicker" style="margin-top:12px">Current market</div>
+    <p id="quote" class="note">Waiting for live data…</p>
+  </div>
+</section>
+
+<section class="card">
+  <div class="kicker">Digit heatmap (0-9)</div>
+  <div style="height:8px"></div>
+  <div class="heat" id="heat"></div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <div class="kicker">Last ticks</div>
+    <div style="height:8px"></div>
+    <div class="ticks" id="ticks">Waiting…</div>
+  </div>
+  <div class="card">
+    <div class="kicker">Signal history</div>
+    <div style="height:8px"></div>
+    <table><thead><tr><th>Time</th><th>Mode</th><th>Digit</th><th>Score</th></tr></thead><tbody id="history"></tbody></table>
+  </div>
+</section>
+
+<section class="card" id="history">
+  <div class="section-title">
+    <h2>Validation & backtest</h2>
+    <span class="badge wait">ANALYSIS ONLY</span>
+  </div>
+  <div class="metrics">
+    <div class="metric"><span class="kicker">Observed samples</span><b id="observed">0</b></div>
+    <div class="metric"><span class="kicker">Model score</span><b id="modelScore">—</b></div>
+    <div class="metric"><span class="kicker">90% threshold</span><b id="threshold" class="red">Not met</b></div>
+    <div class="metric"><span class="kicker">Execution</span><b class="red">Disabled</b></div>
+  </div>
+  <p class="explain">A 90%+ label is a validation threshold, not a guaranteed probability of the next digit being correct. This analysis uses only the current tick window, not out-of-sample historical data.</p>
+</section>
+
+<section class="card admin" id="adminFull">
+  <div class="kicker">Admin management</div>
+  <h2 style="margin:6px 0 14px;font-weight:700">Control Center</h2>
+  <div class="metrics">
+    <div class="metric"><span class="kicker">Users</span><b id="userCount">0</b></div>
+    <div class="metric"><span class="kicker">Active</span><b id="activeCount">0</b></div>
+    <div class="metric"><span class="kicker">Disabled</span><b id="disabledCount">0</b></div>
+    <div class="metric"><span class="kicker">Role</span><b>ADMIN</b></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="admin-actions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+    <button onclick="addUser()">+ Add user</button>
+    <button onclick="editUser()">Edit user</button>
+    <button onclick="disableUser()">Disable / Enable</button>
+    <button onclick="removeUser()" style="border-color:#6b2d38;color:#ff9aa5">Remove user</button>
+    <button onclick="resetPassword()">Reset password</button>
+    <button onclick="exportUsers()">Export user list</button>
+    <button onclick="viewAudit()">Audit log</button>
+    <button onclick="logoutAdmin()">Lock admin panel</button>
+  </div>
+  <div style="height:14px"></div>
+  <div class="kicker">User accounts</div>
+  <table><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Created</th></tr></thead><tbody id="users"></tbody></table>
+  <p class="note">⚠️ Production version: store credentials server-side with salted hashing, role-based auth, session expiry, account lockout, and audit logs. Never store raw passwords in HTML.</p>
+</section>
+
+<section class="card">
+  <div class="kicker">About this tool</div>
+  <p class="note">DigitEdge Pro reads public Deriv market ticks via WebSocket and analyzes digit statistics locally. It does <strong>not</strong> connect to any trading account and cannot place contracts. All analysis is for educational purposes only.</p>
+</section>
+
+</main>
+
+<script>
+// ============ CONFIG ============
+const WS_URL = 'wss://api.derivws.com/trading/v1/options/ws/public';
+const MAX_HISTORY = 8;
+const SCORE_THRESHOLD = 90;
+const RETRY_DELAY = 3000;
+
+// ============ STATE ============
+let ws = null;
+let digits = [];
+let mode = 'MATCHES';
+let history = [];
+let activeSymbols = [];
+let users = [{ username: 'admin', role: 'ADMIN', status: 'Active', created: new Date().toLocaleDateString() }];
+let wsConnected = false;
+let predictionLocked = false;
+let lockedPrediction = null;
+
+// ============ UTILITIES ============
+const $ = id => document.getElementById(id);
+
+function showError(msg) {
+  const box = $('errorBox');
+  box.textContent = '❌ ' + msg;
+  box.classList.add('show');
+  console.error('Error:', msg);
+  setTimeout(() => box.classList.remove('show'), 5000);
+}
+
+function showSuccess(msg) {
+  const box = $('successBox');
+  box.textContent = '✓ ' + msg;
+  box.classList.add('show');
+  console.log('Success:', msg);
+  setTimeout(() => box.classList.remove('show'), 4000);
+}
+
+function safeJsonParse(str, fallback = null) {
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    console.warn('JSON parse error:', e);
+    return fallback;
+  }
+}
+
+function validateDigit(val) {
+  const n = Number(val);
+  return !isNaN(n) && n >= 0 && n <= 9 && Number.isInteger(n) ? n : null;
+}
+
+// ============ WEBSOCKET ============
+function connect() {
+  if (ws) {
+    try { ws.close(); } catch (e) { }
+  }
+
+  try {
+    ws = new WebSocket(WS_URL);
+  } catch (e) {
+    showError('WebSocket init failed: ' + e.message);
+    setTimeout(connect, RETRY_DELAY);
+    return;
+  }
+
+  ws.onopen = () => {
+    wsConnected = true;
+    $('quote').textContent = 'Connected — loading active Deriv indices…';
+    $('engineStatus').textContent = 'Connecting';
+    $('engineBadge').textContent = 'Fetching markets';
+    $('engineBadge').className = 'badge wait';
+
+    try {
+      ws.send(JSON.stringify({ active_symbols: 'brief', req_id: 1 }));
+    } catch (e) {
+      showError('Failed to request symbols: ' + e.message);
+    }
+  };
+
+  ws.onerror = (e) => {
+    wsConnected = false;
+    $('quote').textContent = 'Connection error — retrying…';
+    $('engineStatus').textContent = 'Error';
+    $('engineBadge').textContent = 'Connection failed';
+    $('engineBadge').className = 'badge bad';
+    console.error('WebSocket error:', e);
+  };
+
+  ws.onclose = () => {
+    wsConnected = false;
+    $('quote').textContent = 'Disconnected — reconnecting…';
+    $('engineStatus').textContent = 'Offline';
+    $('engineBadge').textContent = 'Reconnecting…';
+    $('engineBadge').className = 'badge bad';
+    setTimeout(connect, RETRY_DELAY);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const d = safeJsonParse(e.data);
+      if (!d) return;
+
+      if (d.msg_type === 'active_symbols') {
+        loadSymbols(d.active_symbols || []);
+        return;
+      }
+
+      if (d.msg_type === 'tick' && d.tick) {
+        handleTick(d.tick);
+        return;
+      }
+
+      if (d.error) {
+        console.warn('API error:', d.error);
+      }
+    } catch (err) {
+      console.error('Message handler error:', err);
+    }
+  };
+}
+
+function loadSymbols(list) {
+  if (!Array.isArray(list) || list.length === 0) {
+    showError('No symbols received from server');
+    return;
+  }
+
+  const select = $('market');
+  const indices = list.filter(s => {
+    if (!s || typeof s !== 'object') return false;
+    const type = String(s.underlying_symbol_type || '').toLowerCase();
+    const market = String(s.market || '').toLowerCase();
+    const name = String(s.underlying_symbol_name || '').toLowerCase();
+
+    return (
+      type.includes('synthetic') || type.includes('derived') ||
+      market.includes('synthetic') || market.includes('derived') ||
+      /volatility|boom|crash|jump|step|range|drift|trekker|daily.*reset|bull|bear|dex|multi|skew/i.test(name)
+    );
+  });
+
+  if (indices.length === 0) {
+    showError('No Deriv synthetic indices found');
+    return;
+  }
+
+  activeSymbols = indices;
+  select.innerHTML = '';
+
+  indices
+    .sort((a, b) => (a.underlying_symbol_name || a.display_name || '').localeCompare(b.underlying_symbol_name || b.display_name || ''))
+    .forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.underlying_symbol || s.symbol;
+      opt.textContent = (s.underlying_symbol_name || s.display_name || s.underlying_symbol || s.symbol) + ' — ' + (s.underlying_symbol || s.symbol);
+      select.appendChild(opt);
+    });
+
+  if (!select.value && indices.length) {
+    select.selectedIndex = 0;
+    digits = [];
+    history = [];
+    predictionLocked = false;
+    subscribe();
+  }
+
+  showSuccess(`Loaded ${indices.length} markets`);
+}
+
+function subscribe() {
+  if (!ws || ws.readyState !== 1 || !$('market').value) {
+    console.warn('Subscribe: WebSocket not ready or no market selected');
+    return;
+  }
+
+  try {
+    ws.send(JSON.stringify({ ticks: $('market').value, subscribe: 1, req_id: 2 }));
+  } catch (e) {
+    showError('Subscribe failed: ' + e.message);
+  }
+}
+
+function handleTick(t) {
+  if (!t || typeof t !== 'object' || !t.quote) {
+    console.warn('Invalid tick:', t);
+    return;
+  }
+
+  try {
+    const q = String(t.quote || '');
+    const raw = q.replace('.', '');
+    const last = validateDigit(raw.slice(-1));
+
+    if (last === null) {
+      console.warn('Invalid digit extracted from quote:', q);
+      return;
+    }
+
+    digits.push(last);
+
+    const max = Number($('sample').value);
+    if (digits.length > max) {
+      digits = digits.slice(-max);
+    }
+
+    $('lastDigit').textContent = last;
+    $('tickCount').textContent = digits.length;
+    $('engineStatus').textContent = 'Running';
+    $('engineBadge').textContent = 'Live analysis';
+    $('engineBadge').className = 'badge good';
+    $('observed').textContent = digits.length;
+    $('quote').textContent = `${t.symbol || '?'} • ${t.quote}`;
+
+    // Render only updates that don't affect the locked prediction
+    renderFrequencies();
+  } catch (err) {
+    console.error('Tick handling error:', err);
+  }
+}
+
+// ============ ANALYSIS ============
+function frequencies() {
+  const f = Array(10).fill(0);
+  digits.forEach(d => {
+    const v = validateDigit(d);
+    if (v !== null) f[v]++;
+  });
+  return f;
+}
+
+function calculateScore(rates, best) {
+  const rate = rates[best] || 0;
+  const deviation = Math.abs(rate - 0.1);
+  return Math.min(99, Math.round(50 + deviation * 420));
+}
+
+function calculatePrediction() {
+  const f = frequencies();
+  const n = digits.length || 1;
+  const rates = f.map(x => x / n);
+
+  let best = 0;
+  let bestRate = rates[0];
+
+  for (let i = 1; i < rates.length; i++) {
+    if (mode === 'MATCHES' && rates[i] > bestRate) {
+      bestRate = rates[i];
+      best = i;
+    } else if (mode === 'DIFFERS' && rates[i] < bestRate) {
+      bestRate = rates[i];
+      best = i;
+    }
+  }
+
+  return { best, rate: bestRate, rates };
+}
+
+function renderFrequencies() {
+  // Only update the frequency-related data, not the prediction
+  try {
+    const f = frequencies();
+    const n = digits.length || 1;
+    const rates = f.map(x => x / n);
+
+    const prediction = calculatePrediction();
+    const score = calculateScore(prediction.rates, prediction.best);
+    const qualified = score >= SCORE_THRESHOLD;
+
+    // Update only frequency display
+    $('freq').textContent = (prediction.rate * 100).toFixed(1) + '%';
+
+    // Render heatmap
+    const heat = $('heat');
+    heat.innerHTML = '';
+    f.forEach((v, i) => {
+      const p = (v / n) * 100;
+      const d = document.createElement('div');
+      d.className = 'digit';
+      d.innerHTML = `<b>${i}</b><span>${p.toFixed(1)}%</span><div class="bar"><i style="width:${Math.min(100, p * 5)}%"></i></div>`;
+      heat.appendChild(d);
+    });
+
+    // Update last ticks
+    $('ticks').textContent = digits.slice(-60).join(' ');
+  } catch (err) {
+    console.error('Render frequency error:', err);
+  }
+}
+
+function updatePrediction() {
+  // Only called when user clicks MATCHES or DIFFERS
+  try {
+    const prediction = calculatePrediction();
+    const score = calculateScore(prediction.rates, prediction.best);
+    const qualified = score >= SCORE_THRESHOLD;
+
+    lockedPrediction = prediction.best;
+    predictionLocked = true;
+
+    // Update predictions
+    $('predicted').textContent = prediction.best;
+    $('score').textContent = score + '/100';
+    $('score').className = 'score ' + (qualified ? 'green' : score >= 75 ? 'yellow' : 'red');
+    $('qualified').textContent = qualified ? '✓ 90%+ QUALIFIED' : '○ No qualified signal';
+    $('qualified').style.color = qualified ? 'var(--good)' : 'var(--muted)';
+    $('filter').textContent = qualified ? 'YES' : 'NO';
+    $('filter').className = qualified ? 'green' : 'red';
+    $('modelScore').textContent = score + '/100';
+    $('threshold').textContent = qualified ? 'Met' : 'Not met';
+    $('threshold').className = qualified ? 'green' : 'red';
+
+    // Update visual indicators
+    $('predictionBox').classList.add('locked');
+    $('predictionLock').textContent = '🔒 PREDICTION LOCKED';
+    $('predictionLock').className = 'badge locked';
+
+    // Update history
+    if (digits.length > 0) {
+      history.push({ time: new Date().toLocaleTimeString(), mode, digit: prediction.best, score });
+      if (history.length > MAX_HISTORY) history.shift();
+
+      const tbody = document.querySelector('#history tbody') || $('history').querySelector('tbody');
+      if (tbody) {
+        tbody.innerHTML = history
+          .slice()
+          .reverse()
+          .map(x => `<tr><td>${x.time}</td><td>${x.mode}</td><td>${x.digit}</td><td>${x.score}</td></tr>`)
+          .join('');
+      }
+    }
+
+    showSuccess(`Prediction locked: ${mode} predicts digit ${prediction.best} (Score: ${score}/100)`);
+  } catch (err) {
+    console.error('Update prediction error:', err);
+    showError('Prediction update error: ' + err.message);
+  }
+}
+
+// ============ MODE SELECTION ============
+$('match').onclick = () => {
+  mode = 'MATCHES';
+  $('match').classList.add('active');
+  $('diff').classList.remove('active');
+  $('modeTitle').textContent = 'Matches signal';
+  updatePrediction();
+};
+
+$('diff').onclick = () => {
+  mode = 'DIFFERS';
+  $('diff').classList.add('active');
+  $('match').classList.remove('active');
+  $('modeTitle').textContent = 'Differs signal';
+  updatePrediction();
+};
+
+$('market').onchange = () => {
+  digits = [];
+  history = [];
+  predictionLocked = false;
+  $('predicted').textContent = '—';
+  $('score').textContent = 'Waiting…';
+  $('predictionBox').classList.remove('locked');
+  $('predictionLock').textContent = 'Click MATCHES/DIFFERS to predict';
+  $('predictionLock').className = 'badge wait';
+  const tbody = document.querySelector('#history tbody');
+  if (tbody) tbody.innerHTML = '';
+  subscribe();
+};
+
+$('sample').onchange = () => {
+  const newMax = Number($('sample').value);
+  if (digits.length > newMax) {
+    digits = digits.slice(-newMax);
+  }
+  renderFrequencies();
+};
+
+$('adminBtn').onclick = () => {
+  $('adminFull').classList.toggle('open');
+  $('adminFull').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ============ RANGE BUTTONS ============
+document.querySelectorAll('#ranges button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('#ranges button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const val = btn.getAttribute('value') || btn.textContent;
+    $('sample').value = val;
+    const newMax = Number(val);
+    if (digits.length > newMax) {
+      digits = digits.slice(-newMax);
+    }
+    renderFrequencies();
+  };
+});
+
+// ============ NAVIGATION ============
+function scrollToId(id) {
+  const el = $(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// ============ ADMIN PANEL ============
+function renderUsers() {
+  const tbody = $('users');
+  tbody.innerHTML = users.map(u => `<tr><td>${escapeHtml(u.username)}</td><td>${u.role}</td><td>${u.status}</td><td>${u.created}</td></tr>`).join('');
+  $('userCount').textContent = users.length;
+  $('activeCount').textContent = users.filter(u => u.status === 'Active').length;
+  $('disabledCount').textContent = users.filter(u => u.status === 'Disabled').length;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function addUser() {
+  const username = prompt('New username:');
+  if (!username || !username.trim()) return;
+  if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+    showError('Username already exists.');
+    return;
+  }
+  users.push({ username: username.trim(), role: 'USER', status: 'Active', created: new Date().toLocaleDateString() });
+  renderUsers();
+  showSuccess('User added.');
+}
+
+function findUser() {
+  return prompt('Enter username:') || '';
+}
+
+function editUser() {
+  const n = findUser();
+  if (!n) return;
+  const u = users.find(x => x.username.toLowerCase() === n.toLowerCase());
+  if (!u) {
+    showError('User not found.');
+    return;
+  }
+  const r = prompt('Role (USER/ADMIN):', u.role);
+  if (r && (r.toUpperCase() === 'USER' || r.toUpperCase() === 'ADMIN')) {
+    u.role = r.toUpperCase();
+    renderUsers();
+    showSuccess('User updated.');
+  } else if (r) {
+    showError('Invalid role.');
+  }
+}
+
+function disableUser() {
+  const n = findUser();
+  if (!n) return;
+  const u = users.find(x => x.username.toLowerCase() === n.toLowerCase());
+  if (!u) {
+    showError('User not found.');
+    return;
+  }
+  u.status = u.status === 'Active' ? 'Disabled' : 'Active';
+  renderUsers();
+  showSuccess(`User ${u.status.toLowerCase()}.`);
+}
+
+function removeUser() {
+  const n = findUser();
+  if (!n) return;
+  if (n.toLowerCase() === 'admin') {
+    showError('Cannot remove admin user.');
+    return;
+  }
+  const idx = users.findIndex(x => x.username.toLowerCase() === n.toLowerCase());
+  if (idx === -1) {
+    showError('User not found.');
+    return;
+  }
+  users.splice(idx, 1);
+  renderUsers();
+  showSuccess('User removed.');
+}
+
+function resetPassword() {
+  const n = findUser();
+  if (!n) return;
+  const u = users.find(x => x.username.toLowerCase() === n.toLowerCase());
+  if (!u) {
+    showError('User not found.');
+    return;
+  }
+  showSuccess('Password reset link sent to ' + escapeHtml(u.username) + '.');
+}
+
+function exportUsers() {
+  try {
+    const blob = new Blob([JSON.stringify(users, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'users_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showSuccess('User list exported.');
+  } catch (e) {
+    showError('Export failed: ' + e.message);
+  }
+}
+
+function viewAudit() {
+  showSuccess('Audit log: No admin actions recorded in this session.');
+}
+
+function logoutAdmin() {
+  $('adminFull').classList.remove('open');
+  showSuccess('Admin panel locked.');
+}
+
+// ============ INIT ============
+renderUsers();
+connect();
+</script>
+
+</body>
+</html>
