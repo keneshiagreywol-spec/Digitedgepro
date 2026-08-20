@@ -1,2 +1,0 @@
-# Digitedgepro
-DegitEdgePro
