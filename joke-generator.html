@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Random Joke Generator</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#7c9cff;--muted:#9fb0d6;--text:#eaf0ff}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(180deg,#071028 0%,var(--bg) 100%);color:var(--text);display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+    .wrap{width:100%;max-width:760px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:20px;border:1px solid rgba(124,156,255,0.06);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    select,input[type=checkbox],button{background:transparent;border:1px solid rgba(124,156,255,0.08);color:var(--text);padding:8px 10px;border-radius:8px}
+    button{cursor:pointer;border-color:var(--accent);background:linear-gradient(180deg, rgba(124,156,255,0.06), rgba(124,156,255,0.03));font-weight:700}
+    .card{background:var(--card);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+    #joke{font-size:18px;line-height:1.5;margin:8px 0 12px}
+    .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .small{font-size:13px;color:var(--muted)}
+    .spacer{flex:1}
+    .history{margin-top:12px;max-height:160px;overflow:auto;border-top:1px dashed rgba(255,255,255,0.03);padding-top:12px}
+    .hist-item{padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);margin-bottom:8px;font-size:13px}
+    .actions{display:flex;gap:8px}
+    .loader{width:14px;height:14px;border:2px solid rgba(255,255,255,0.08);border-top:2px solid var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:540px){#joke{font-size:16px}}
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main" aria-labelledby="title">
+    <h1 id="title">Random Joke Generator</h1>
+    <p class="lead">Fetch jokes from external APIs. Choose source, category, and get a fresh joke. Works client-side—no server required.</p>
+
+    <div class="controls">
+      <label class="small">Source:
+        <select id="apiSelect" title="Select joke API">
+          <option value="jokeapi">JokeAPI (any, safe)</option>
+          <option value="official">Official Joke API</option>
+          <option value="icanhaz">icanhazdadjoke</option>
+        </select>
+      </label>
+
+      <label class="small">Category:
+        <select id="categorySelect" title="Category (where supported)">
+          <option value="Any">Any</option>
+          <option value="Programming">Programming</option>
+          <option value="Misc">Misc</option>
+          <option value="Dark">Dark</option>
+          <option value="Pun">Pun</option>
+          <option value="Spooky">Spooky</option>
+          <option value="Christmas">Christmas</option>
+        </select>
+      </label>
+
+      <label class="small"><input type="checkbox" id="nsfwToggle"> Allow nsfw/offensive</label>
+
+      <div style="margin-left:auto"></div>
+
+      <button id="getBtn" aria-live="polite">Get joke</button>
+      <button id="autoBtn">Auto (Off)</button>
+      <button id="clearHist" title="Clear local history">Clear history</button>
+    </div>
+
+    <div class="card" aria-live="polite">
+      <div class="meta">
+        <div class="small">Source: <span id="srcLabel">JokeAPI</span></div>
+        <div class="spacer"></div>
+        <div class="small" id="status"></div>
+      </div>
+
+      <div id="joke" aria-hidden="false">Press "Get joke" to fetch one — or enable Auto.</div>
+
+      <div class="actions" style="margin-top:6px">
+        <button id="copyBtn">Copy</button>
+        <button id="shareBtn">Share</button>
+        <button id="saveBtn">Save to history</button>
+      </div>
+
+      <div class="history" id="history" aria-label="Saved jokes (local)"></div>
+    </div>
+  </div>
+
+<script>
+  const apiSelect = document.getElementById('apiSelect');
+  const categorySelect = document.getElementById('categorySelect');
+  const getBtn = document.getElementById('getBtn');
+  const autoBtn = document.getElementById('autoBtn');
+  const status = document.getElementById('status');
+  const jokeEl = document.getElementById('joke');
+  const srcLabel = document.getElementById('srcLabel');
+  const copyBtn = document.getElementById('copyBtn');
+  const shareBtn = document.getElementById('shareBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const historyEl = document.getElementById('history');
+  const nsfwToggle = document.getElementById('nsfwToggle');
+  const clearHist = document.getElementById('clearHist');
+
+  let autoTimer = null;
+  let lastJoke = null;
+  const AUTO_INTERVAL = 8000;
+
+  function loadHistory(){ try{ return JSON.parse(localStorage.getItem('joke_history')||'[]'); }catch(e){ return [] } }
+  function saveHistory(arr){ localStorage.setItem('joke_history', JSON.stringify(arr)); }
+  function pushHistory(j){ const h=loadHistory(); h.unshift({j,ts:Date.now()}); if(h.length>50) h.pop(); saveHistory(h); renderHistory(); }
+
+  function renderHistory(){
+    const h = loadHistory();
+    historyEl.innerHTML = h.length ? h.map(item=>`<div class="hist-item">${escapeHtml(item.j)}<div class="small" style="color:${'#9fb0d6'}">${new Date(item.ts).toLocaleString()}</div></div>`).join('') : '<div class="small" style="color:var(--muted)">No saved jokes</div>';
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>\"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function setBusy(on, text=''){
+    status.innerHTML = on ? `<span class="loader" aria-hidden="true"></span> ${text}` : text;
+  }
+
+  async function fetchFromJokeAPI(category, allowNsfw){
+    const cat = (category && category!=='Any') ? category : 'Any';
+    const blacklist = allowNsfw ? '' : '&blacklistFlags=nsfw,religious,political,racist,sexist,explicit';
+    const url = `https://v2.jokeapi.dev/joke/${encodeURIComponent(cat)}?type=single${blacklist}&safe-mode`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('JokeAPI error: '+res.status);
+    const data = await res.json();
+    if(data && (data.joke || (data.setup && data.delivery))) {
+      return data.joke || `${data.setup} ${data.delivery}`;
+    }
+    throw new Error('No joke in response');
+  }
+
+  async function fetchFromOfficial(){
+    const url = 'https://official-joke-api.appspot.com/jokes/random';
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Official API error: '+res.status);
+    const data = await res.json();
+    if(data && (data.setup || data.punchline)) return `${data.setup} ${data.punchline}`.trim();
+    throw new Error('No joke');
+  }
+
+  async function fetchFromIcanhaz(){
+    const url = 'https://icanhazdadjoke.com/';
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if(!res.ok) throw new Error('icanhaz error: '+res.status);
+    const data = await res.json();
+    if(data && data.joke) return data.joke;
+    throw new Error('No joke');
+  }
+
+  async function getJoke(){
+    setBusy(true,'Fetching...');
+    try{
+      const api = apiSelect.value;
+      srcLabel.textContent = apiSelect.options[apiSelect.selectedIndex].text;
+      let text = '';
+      if(api === 'jokeapi'){
+        text = await fetchFromJokeAPI(categorySelect.value, nsfwToggle.checked);
+      } else if(api === 'official'){
+        text = await fetchFromOfficial();
+      } else if(api === 'icanhaz'){
+        text = await fetchFromIcanhaz();
+      } else {
+        throw new Error('Unknown API');
+      }
+      lastJoke = text;
+      jokeEl.textContent = text;
+      setBusy(false,'');
+    }catch(err){
+      setBusy(false,'Error');
+      jokeEl.textContent = 'Error fetching joke: ' + (err.message || err);
+      console.error(err);
+    }
+  }
+
+  autoBtn.addEventListener('click', () => {
+    if(autoTimer){
+      clearInterval(autoTimer); autoTimer = null; autoBtn.textContent = 'Auto (Off)'; setBusy(false,'');
+    } else {
+      autoBtn.textContent = 'Auto (On)';
+      getJoke();
+      autoTimer = setInterval(getJoke, AUTO_INTERVAL);
+    }
+  });
+
+  getBtn.addEventListener('click', getJoke);
+
+  copyBtn.addEventListener('click', async () => {
+    if(!lastJoke){ setBusy(false,'No joke to copy'); return; }
+    try{ await navigator.clipboard.writeText(lastJoke); setBusy(false,'Copied!'); setTimeout(()=>setBusy(false,''),1200); }catch(e){ setBusy(false,'Copy failed'); }
+  });
+
+  shareBtn.addEventListener('click', async ()=>{
+    if(!lastJoke){ setBusy(false,'No joke to share'); return; }
+    if(navigator.share){
+      try{ await navigator.share({title:'Joke',text:lastJoke}); setBusy(false,'Shared'); }catch(e){ setBusy(false,'Share cancelled'); }
+    } else {
+      const url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(lastJoke);
+      window.open(url,'_blank','noopener');
+    }
+  });
+
+  saveBtn.addEventListener('click', ()=>{ if(lastJoke){ pushHistory(lastJoke); setBusy(false,'Saved'); } });
+
+  clearHist.addEventListener('click', ()=>{ localStorage.removeItem('joke_history'); renderHistory(); setBusy(false,'History cleared'); });
+
+  apiSelect.addEventListener('change', () => {
+    const api = apiSelect.value;
+    srcLabel.textContent = apiSelect.options[apiSelect.selectedIndex].text;
+    if(api === 'icanhaz'){
+      categorySelect.disabled = true;
+    } else {
+      categorySelect.disabled = false;
+    }
+  });
+
+  getBtn.addEventListener('keyup', (e)=>{ if(e.key==='Enter' || e.key===' ') getJoke(); });
+
+  (function init(){ renderHistory(); srcLabel.textContent = apiSelect.options[apiSelect.selectedIndex].text; })();
+</script>
+</body>
+</html>
