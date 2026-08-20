@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>World Clocks</title>
+  <style>
+    :root{
+      --bg:#070b14; --panel:#0d1424; --panel2:#111b2f; --accent:#7c9cff; --text:#f5f7fb; --muted:#8795ae;
+    }
+    body{
+      font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;
+      background:radial-gradient(circle at 10% 0%,#101a31 0,#070b14 38%),var(--bg);
+      color:var(--text);
+      margin:0;
+      padding:24px;
+    }
+    .wrap{max-width:980px;margin:0 auto;display:grid;gap:18px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    select,input,button{background:var(--panel2);color:var(--text);border:1px solid rgba(36,51,79,0.5);padding:8px;border-radius:8px}
+    button{cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .clock{
+      background:var(--panel);
+      border:1px solid rgba(36,51,79,0.5);
+      padding:14px;border-radius:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;
+    }
+    .tz{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.06em}
+    .time{font-size:36px;font-weight:800}
+    .date{font-size:12px;color:var(--muted)}
+    .meta{display:flex;gap:8px;align-items:center;margin-top:6px}
+    .remove{background:transparent;border:1px solid rgba(124,156,255,0.12);color:var(--accent);padding:6px 8px;border-radius:8px}
+    .notice{font-size:13px;color:var(--muted)}
+    @media(max-width:600px){.time{font-size:28px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>World Clocks</h1>
+      <div class="controls">
+        <label class="notice" for="tzSelect">Add timezone:</label>
+        <select id="tzSelect" aria-label="Timezone select"></select>
+        <button id="addBtn">Add</button>
+        <button id="autoAddBtn">Add Local</button>
+      </div>
+    </header>
+
+    <p class="notice">Choose a timezone and click Add. Clocks update every second using the browser's Intl API.</p>
+
+    <main>
+      <div class="grid" id="clocks"></div>
+    </main>
+  </div>
+
+<script>
+  // Common IANA timezones list (short). You can expand it.
+  const COMMON_TIMEZONES = [
+    'UTC',
+    'Europe/London',
+    'Europe/Paris',
+    'America/New_York',
+    'America/Chicago',
+    'America/Los_Angeles',
+    'Asia/Tokyo',
+    'Asia/Hong_Kong',
+    'Asia/Kolkata',
+    'Australia/Sydney',
+    'Pacific/Auckland'
+  ];
+
+  // Full-ish list for the select (kept modest here)
+  const TZ_LIST = [
+    'UTC','Europe/London','Europe/Paris','Europe/Berlin','Europe/Madrid','Europe/Moscow',
+    'America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Sao_Paulo',
+    'Asia/Tokyo','Asia/Seoul','Asia/Hong_Kong','Asia/Kolkata','Asia/Singapore',
+    'Australia/Sydney','Pacific/Auckland','Africa/Johannesburg'
+  ];
+
+  const clocksEl = document.getElementById('clocks');
+  const tzSelect = document.getElementById('tzSelect');
+  const addBtn = document.getElementById('addBtn');
+  const autoAddBtn = document.getElementById('autoAddBtn');
+
+  // Populate timezone dropdown
+  TZ_LIST.forEach(tz => {
+    const opt = document.createElement('option');
+    opt.value = tz;
+    opt.textContent = tz.replace('_',' ');
+    tzSelect.appendChild(opt);
+  });
+
+  // Keep track of clock entries
+  const clocks = new Map();
+
+  function formatTime(date, timeZone) {
+    // 24-hour with seconds
+    const time = new Intl.DateTimeFormat(undefined, {
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false, timeZone
+    }).format(date);
+    const dateStr = new Intl.DateTimeFormat(undefined, {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+      timeZone
+    }).format(date);
+    // timeZoneName short (e.g. GMT+1, CEST)
+    const tzName = new Intl.DateTimeFormat(undefined, { timeZone, timeZoneName: 'short' })
+      .formatToParts(date).find(p => p.type === 'timeZoneName')?.value || timeZone;
+    return { time, dateStr, tzName };
+  }
+
+  function createClockCard(timeZone) {
+    if (clocks.has(timeZone)) return; // already exists
+
+    const card = document.createElement('div');
+    card.className = 'clock';
+    card.dataset.timezone = timeZone;
+
+    const tzLabel = document.createElement('div');
+    tzLabel.className = 'tz';
+    tzLabel.textContent = timeZone;
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'time';
+    timeEl.textContent = '—:—:—';
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'date';
+    dateEl.textContent = '';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+
+    const tzshort = document.createElement('div');
+    tzshort.className = 'notice';
+    tzshort.textContent = '';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove';
+    removeBtn.textContent = 'Remove';
+    removeBtn.onclick = () => {
+      clocks.delete(timeZone);
+      card.remove();
+    };
+
+    meta.appendChild(tzshort);
+    meta.appendChild(removeBtn);
+
+    card.appendChild(tzLabel);
+    card.appendChild(timeEl);
+    card.appendChild(dateEl);
+    card.appendChild(meta);
+
+    clocksEl.appendChild(card);
+
+    clocks.set(timeZone, { card, timeEl, dateEl, tzshort });
+    // update immediately
+    updateClock(timeZone);
+  }
+
+  function updateClock(timeZone) {
+    const entry = clocks.get(timeZone);
+    if (!entry) return;
+    const now = new Date();
+    const { time, dateStr, tzName } = formatTime(now, timeZone);
+    entry.timeEl.textContent = time;
+    entry.dateEl.textContent = dateStr;
+    entry.tzshort.textContent = tzName;
+  }
+
+  // Add some default clocks
+  COMMON_TIMEZONES.forEach(tz => createClockCard(tz));
+
+  // Add from select
+  addBtn.addEventListener('click', () => {
+    const tz = tzSelect.value;
+    if (tz) createClockCard(tz);
+  });
+
+  // Auto add local timezone
+  autoAddBtn.addEventListener('click', () => {
+    const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    createClockCard(localTz);
+  });
+
+  // Global timer to update all clocks every second
+  setInterval(() => {
+    for (const tz of clocks.keys()) updateClock(tz);
+  }, 1000);
+
+</script>
+</body>
+</html>
